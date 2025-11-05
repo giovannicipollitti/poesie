@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#101114" />
+  <link rel="icon" href="favicon.png" type="image/png">
+  <title>Poesie</title>
+  <style>
+    :root{
+      --bg:#0f1115;
+      --panel:#12151b;
+      --card:#181b22;
+      --text:#e8eaf0;
+      --muted:#a6adbb;
+      --accent:#ff4d6d;
+      --radius:16px;
+      color-scheme: dark;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%}
+    body{
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: var(--bg) url('sfondo.jpg') center/cover fixed no-repeat;
+      color: var(--text);
+      line-height:1.6;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* HAMBURGER sempre visibile */
+    .hambox{
+      position: fixed; 
+      top: max(10px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      z-index: 60;
+    }
+    .hambox button{
+      width:44px; height:44px; border-radius:12px; border:1px solid #2a3040;
+      background:#1e2230; color:#fff; font-size:22px; line-height:1;
+    }
+    /* OVERLAY + DRAWER */
+    .overlay{
+      position: fixed; inset:0; background: rgba(0,0,0,.45); z-index:50; display:none;
+    }
+    .overlay.show{display:block}
+    .drawer{
+      position: fixed; inset:0 auto 0 0; width:min(86vw, 320px);
+      background: linear-gradient(180deg, #101114, #12151b);
+      border-right:1px solid #222633;
+      padding: calc(env(safe-area-inset-top) + 12px) 12px 12px;
+      transform: translateX(-100%);
+      transition: transform .2s ease;
+      z-index: 70;
+      overflow-y:auto;
+    }
+    .drawer.open{ transform: translateX(0); }
+    .drawer h3{ margin:6px 0 10px; font-size:16px; color: var(--muted); }
+    .toc a{
+      display:block; margin:6px 0; padding:10px 12px;
+      border-radius:12px; text-decoration:none; color:var(--text);
+      background:#1e2230; border:1px solid #2a3040; font-size:15px;
+    }
+    .toc a:focus,.toc a:hover{border-color: var(--accent);}
+    .toc a.active{ border-color: var(--accent); box-shadow: 0 0 0 2px #ff4d6d22 inset; }
+
+    /* HEADER centrale con cover piccola */
+    header.site{
+      max-width: 760px; margin: 0 auto; padding: 20px 16px 16px;
+      text-align:center;
+    }
+    header.site h1{
+      margin: 4px 0 10px; font-size: clamp(22px, 5.2vw, 34px);
+      font-weight: 750; letter-spacing:.2px;
+    }
+    .cover-small{
+      width: 200px; height: 200px; border-radius: 16px; object-fit: cover; object-position: center;
+      border:1px solid #2a3040; display:block; margin: 0 auto;
+    }
+    .subtitle{ color: yellow; font-size: 20px; margin-top: 50px; }
+	.descrizione{
+  max-width: 70%;
+  margin: 12px auto;
+  font-size: 20px;
+  line-height: 1.6;
+  text-align: justify;
+  color: #ffd54f;      /* giallo */
+  padding: 8px;
+}
+    /* CONTENUTO */
+main{
+  max-width: 500px;      /* prima era 760px */
+  margin: 0 auto;
+  padding: 8px 16px 24px;
+}
+    .poem{
+      background: var(--card);
+      border:1px solid #232836;
+      border-radius: var(--radius);
+      padding:16px;
+      margin: 14px 0 18px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.25);
+      scroll-margin-top: 20px;
+    }
+    .poem h2{
+      margin:0 0 8px; font-size: clamp(18px, 4.5vw, 26px);
+      line-height:1.25; color:red;
+    }
+    .meta{ color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+    figure{margin:10px 0 12px}
+figure img{
+  width: 60%;
+  height: 200px;
+  aspect-ratio: 1 / 1;     /* forza proporzione quadrata */
+  object-fit: cover;
+  object-position: center;
+  border-radius: 12px;
+  border: 1px solid #232836;
+  display: block;
+  margin: 0 auto;          /* ✅ CENTRA L’IMMAGINE */
+}
+    figure figcaption{ font-size:12px; color:var(--muted); margin-top:6px; }
+.verses{
+  white-space:pre-wrap;
+  font-size: clamp(16px, 4.2vw, 18px);
+  letter-spacing:.5px;
+  line-height: 1.8;
+  color: #ffd54f;
+}
+
+    /* Torna su */
+    .backtop{
+      position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom));
+      padding:12px 14px; border-radius:999px; background:#1e2230; color:#fff;
+      border:1px solid #2a3040; text-decoration:none; display:none; z-index:40;
+      font-size:14px;
+    }
+    .backtop.show{display:inline-block}
+    @media (max-width: 380px){
+      .cover-small{ width:100px; height:100px; }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .drawer{ transition:none }
+      html{ scroll-behavior:auto }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HAMBURGER -->
+  <div class="hambox">
+    <button id="openNav" aria-label="Apri menu" aria-haspopup="true" aria-controls="drawer">☰</button>
+  </div>
+
+  <!-- OVERLAY + DRAWER -->
+  <div class="overlay" id="overlay" tabindex="-1" aria-hidden="true"></div>
+  <aside class="drawer" id="drawer" aria-label="Menu poesie" aria-modal="true">
+    <h3>Poesie</h3>
+    <nav class="toc" id="toc"></nav>
+  </aside>
+
+  <!-- HEADER -->
+  <header class="site" id="top">
+    <h1>Lo zaino del viandante...</h1><br><br>
+
+    <img src="cover.jpg" class="cover-small" alt="Copertina raccolta" loading="eager">
+<div class="descrizione"><strong><br><br>
+
+  Qui metterò una descrizione del progetto,
+  il motivo che mi ha portato a scrivere queste poesie
+  e qualche pensiero sul percorso creativo.
+  Saranno alcune righe che spiegano il senso
+  di questo viaggio emotivo, interiore, personale,
+  dove ogni immagine e parola trova la sua ragione.</strong><br><br><br><br>
+
+
+</div>
+
+  </header>
+
+  <main>
+    <!-- ====== SEZIONI PRONTE (14) ====== -->
+    <section class="poem" id="titolo1">
+      <h2>Il viaggio</h2>
+      <div class="meta">Autore: Cipollitti Giovanni</div>
+      <figure>
+        <img src="img1.jpg" alt="Immagine per titolo1" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Cammino leggero, ma non vuoto,
+
+nel mio zaino c’è la vita,
+
+le carezze e le ferite,
+
+i giorni chiari e quelli che odorano di pioggia.
+
+Ci sono gli occhi di mia madre,
+
+che mi indicano ancora la direzione,
+
+anche quando il sentiero si perde nel silenzio.
+
+Ogni passo pesa quanto serve,
+
+né più né meno.
+
+E se il vento mi sfiora,
+
+so che non è solitudine
+
+è il sorriso di mia madre che mi ricorda
+
+che sono ancora in viaggio.</div>
+    </section>
+<br><br>
+    <section class="poem" id="titolo2">
+      <h2>La mia forza</h2>
+      <div class="meta">Autore: Cipollitti Giovanni</div>
+      <figure>
+        <img src="img2.jpg" alt="Immagine per titolo2" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Non parlavi molto, ma ogni gesto insegnava.
+
+Le tue mani forti mi hanno dato coraggio.
+
+Hai costruito la mia forza senza dire come.
+
+Da te ho imparato che il silenzio vale più delle parole.
+
+La lealtà l’ho respirata nel tuo esempio.
+
+Restare in piedi, anche quando il vento spinge.
+
+Ogni tua fatica è diventata la mia radice.
+
+Mi hai insegnato a credere, anche quando è difficile.
+
+Cammino solo, ma sento il tuo passo accanto.
+
+Il tuo sguardo vive dentro ogni mia scelta.
+
+Se alzo lo sguardo, ti trovo nel cielo quieto.
+
+Non come ricordo, ma come forza che resta.
+
+Papà, sei ancora la mia direzione.</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo3">
+      <h2>titolo3</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img3.jpg" alt="Immagine per titolo3" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 3…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo4">
+      <h2>titolo4</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img4.jpg" alt="Immagine per titolo4" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 4…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo5">
+      <h2>titolo5</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img5.jpg" alt="Immagine per titolo5" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 5…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo6">
+      <h2>titolo6</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img6.jpg" alt="Immagine per titolo6" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 6…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo7">
+      <h2>titolo7</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img7.jpg" alt="Immagine per titolo7" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 7…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo8">
+      <h2>titolo8</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img8.jpg" alt="Immagine per titolo8" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 8…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo9">
+      <h2>titolo9</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img9.jpg" alt="Immagine per titolo9" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 9…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo10">
+      <h2>titolo10</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img10.jpg" alt="Immagine per titolo10" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 10…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo11">
+      <h2>titolo11</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img11.jpg" alt="Immagine per titolo11" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 11…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo12">
+      <h2>titolo12</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img12.jpg" alt="Immagine per titolo12" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 12…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo13">
+      <h2>titolo13</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img13.jpg" alt="Immagine per titolo13" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 13…</div>
+    </section>
+<br><br>
+
+    <section class="poem" id="titolo14">
+      <h2>titolo14</h2>
+      <div class="meta">Autore: —</div>
+      <figure>
+        <img src="img14.jpg" alt="Immagine per titolo14" loading="lazy" width="1080" height="720">
+        <figcaption></figcaption>
+      </figure>
+      <div class="verses">Scrivi qui la poesia 14…</div>
+    </section>
+  </main>
+
+  <a href="#top" class="backtop" id="backtop" aria-label="Torna su">↑ Su</a>
+
+  <script>
+    // Scroll morbido
+    document.documentElement.style.scrollBehavior = 'smooth';
+
+    // Costruzione TOC nel drawer in base ai titoli
+    (function buildTOC(){
+      const toc = document.getElementById('toc');
+      const poems = Array.from(document.querySelectorAll('.poem'));
+      poems.forEach(sec=>{
+        const h2 = sec.querySelector('h2');
+        const id = sec.id || h2.textContent.trim().toLowerCase()
+          .replace(/\s+/g,'-').replace(/[^\w\-]/g,'');
+        if(!sec.id) sec.id = id;
+        const a = document.createElement('a');
+        a.href = `#${id}`;
+        a.textContent = h2.textContent.trim();
+        a.addEventListener('click', ()=> closeNav(true)); // chiudi nav dopo la scelta
+        toc.appendChild(a);
+      });
+    })();
+
+    // Evidenzia link attivo durante lo scroll
+    (function highlightOnScroll(){
+      const links = Array.from(document.querySelectorAll('#toc a'));
+      const sections = links.map(a => document.querySelector(a.getAttribute('href')));
+      const obs = new IntersectionObserver(entries=>{
+        entries.forEach(e=>{
+          if(e.isIntersecting){
+            links.forEach(l=>l.classList.toggle('active', l.getAttribute('href') === '#'+e.target.id));
+          }
+        });
+      }, { rootMargin: '-40% 0px -50% 0px', threshold: 0.01 });
+      sections.forEach(s=> s && obs.observe(s));
+    })();
+
+    // Drawer open/close + overlay + focus handling
+    const drawer = document.getElementById('drawer');
+    const overlay = document.getElementById('overlay');
+    const openBtn = document.getElementById('openNav');
+    let lastFocus = null;
+
+    function openNav(){
+      lastFocus = document.activeElement;
+      drawer.classList.add('open');
+      overlay.classList.add('show');
+      document.body.classList.add('nav-open');
+      drawer.setAttribute('aria-hidden','false');
+      overlay.setAttribute('aria-hidden','false');
+      const firstLink = drawer.querySelector('a');
+      if(firstLink) firstLink.focus();
+    }
+    function closeNav(scrollToTarget){
+      drawer.classList.remove('open');
+      overlay.classList.remove('show');
+      document.body.classList.remove('nav-open');
+      drawer.setAttribute('aria-hidden','true');
+      overlay.setAttribute('aria-hidden','true');
+      if(!scrollToTarget && lastFocus) lastFocus.focus();
+    }
+
+    openBtn.addEventListener('click', openNav);
+    overlay.addEventListener('click', ()=> closeNav(false));
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && drawer.classList.contains('open')) closeNav(false);
+    });
+
+    // Pulsante "torna su"
+    (function backToTop(){
+      const btn = document.getElementById('backtop');
+      const onScroll = () => {
+        if(window.scrollY > 600){ btn.classList.add('show'); }
+        else { btn.classList.remove('show'); }
+      };
+      window.addEventListener('scroll', onScroll, {passive:true});
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
